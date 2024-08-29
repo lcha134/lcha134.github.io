@@ -90,7 +90,9 @@
 
 			const checkDigit = sum - multiplied;
 
-			return checkDigit;
+			console.log(`Input: '${containerNumber}', Check Digit: '${checkDigit}'`);
+
+			return checkDigit === 10 ? 0 : checkDigit;
 		}
 		
 		function autoGrow(element) {
