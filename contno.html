@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Container Number Extraction</title>
+	<style>	
+		textarea {
+			width: 100%;
+			min-height: 150px;
+			max-height: 35vh;
+			resize: vertical;
+			padding: 10px;
+			box-sizing: border-box;
+			border: 1px solid #ccc;
+			border-radius: 5px;
+			font-size: 16px;
+			line-height: 1.5;
+			margin-bottom: 10px;
+		}
+		button {
+			font-size: 16px;
+			padding: 10px;
+			border: none;
+			border-radius: 5px;
+			background-color: #4CAF50;
+			color: #fff;
+			cursor: pointer;
+		}
+		button:hover {
+			background-color: #3e8e41;
+		}
+	</style>
+</head>
+<body>
+	<h1>Container Number Extractor</h1>
+	<p>Enter text:</p>
+	<textarea id="input" placeholder="Enter text with container numbers" oninput="autoGrow(this)"></textarea>
+	<button onclick="extractContainerNumbers(true)">Extract Container Numbers (w/ Check Digit)</button>	
+	<button onclick="extractContainerNumbers(false)">Extract Container Numbers (w/o Check Digit) </button>
+	<p id ="outputTitle">Container Numbers:</p>
+	<textarea id="output" placeholder="Extracted container numbers" oninput="autoGrow(this)" readonly></textarea>
+	<br>
+	<button onclick="copyToClipboard()">Copy to Clipboard</button>
+
+	<script>
+		function extractContainerNumbers(validateCheckDigit = true) {
+			const input = document.getElementById("input").value.toUpperCase();
+
+			const containerNumbers = input.match(/[A-Z]{3}U\d{7}/g);
+
+			// If check digit validation is required, filter valid container numbers
+			let validContainerNumbers;
+			if (validateCheckDigit) {
+				validContainerNumbers = containerNumbers.filter(containerNumber => {
+					const checkDigit = calculateCheckDigit(containerNumber.substring(0, 10));
+					return containerNumber.endsWith(checkDigit);
+				});
+			} else {
+				validContainerNumbers = containerNumbers;
+			}
+			
+			const uniqueContainerNumbers = [...new Set(validContainerNumbers)];
+			const countText = "Container Numbers: [" + uniqueContainerNumbers.length + "] Results found";
+			
+			document.getElementById("outputTitle").textContent = countText;		
+			document.getElementById("output").value = uniqueContainerNumbers.join("\n");
+			
+			const numLines = (output.value.match(/\n/g) || []).length + 1;
+			output.rows = numLines > 10 ? 20 : numLines;
+			output.scrollTop = 0;
+		}
+
+		function calculateCheckDigit(containerNumber) {
+			const letterValues = {
+				"A": 10, "B": 12, "C": 13, "D": 14, "E": 15, "F": 16, "G": 17, "H": 18, "I": 19, "J": 20,
+				"K": 21, "L": 23, "M": 24, "N": 25, "O": 26, "P": 27, "Q": 28, "R": 29, "S": 30, "T": 31,
+				"U": 32, "V": 34, "W": 35, "X": 36, "Y": 37, "Z": 38
+			};
+
+			let sum = 0;
+			for (let i = 0; i < containerNumber.length; i++) {
+				const char = containerNumber.charAt(i);
+				const value = letterValues[char] || parseInt(char);
+				const positionValue = Math.pow(2, i);
+				sum += value * positionValue;
+			}
+
+			const divided = sum / 11;
+			const roundedDown = Math.floor(divided);
+			const multiplied = roundedDown * 11;
+
+			const checkDigit = sum - multiplied;
+
+			return checkDigit;
+		}
+		
+		function autoGrow(element) {
+			element.style.height = "auto";
+			element.style.height = (element.scrollHeight) + "px";
+		}
+		
+		function copyToClipboard() {
+			const output = document.getElementById("output");
+			output.select();
+			document.execCommand("copy");
+		}
+	</script>
+</body>
+</html>
