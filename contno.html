@@ -52,6 +52,7 @@
 			if (validateCheckDigit) {
 				validContainerNumbers = containerNumbers.filter(containerNumber => {
 					const checkDigit = calculateCheckDigit(containerNumber.substring(0, 10));
+					console.log(`Input: '${containerNumber}', Check Digit: '${checkDigit}'`);
 					return containerNumber.endsWith(checkDigit);
 				});
 			} else {
@@ -89,8 +90,6 @@
 			const multiplied = roundedDown * 11;
 
 			const checkDigit = sum - multiplied;
-
-			console.log(`Input: '${containerNumber}', Check Digit: '${checkDigit}'`);
 
 			return checkDigit === 10 ? 0 : checkDigit;
 		}
