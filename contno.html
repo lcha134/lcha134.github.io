@@ -42,10 +42,10 @@
 	<button onclick="copyToClipboard()">Copy to Clipboard</button>
 
 	<script>
-		function extractContainerNumbers(validateCheckDigit = true) {
-			const input = document.getElementById("input").value.toUpperCase();
+                function extractContainerNumbers(validateCheckDigit = true) {
+                        const input = document.getElementById("input").value.toUpperCase();
 
-			const containerNumbers = input.match(/[A-Z]{3}U\d{7}/g);
+                        const containerNumbers = input.match(/[A-Z]{3}U\d{7}/g) || [];
 
 			// If check digit validation is required, filter valid container numbers
 			let validContainerNumbers;
@@ -62,13 +62,14 @@
 			const uniqueContainerNumbers = [...new Set(validContainerNumbers)];
 			const countText = "Container Numbers: [" + uniqueContainerNumbers.length + "] Results found";
 			
-			document.getElementById("outputTitle").textContent = countText;		
-			document.getElementById("output").value = uniqueContainerNumbers.join("\n");
-			
-			const numLines = (output.value.match(/\n/g) || []).length + 1;
-			output.rows = numLines > 10 ? 20 : numLines;
-			output.scrollTop = 0;
-		}
+                        document.getElementById("outputTitle").textContent = countText;
+                        const output = document.getElementById("output");
+                        output.value = uniqueContainerNumbers.join("\n");
+
+                        const numLines = (output.value.match(/\n/g) || []).length + 1;
+                        output.rows = numLines > 10 ? 20 : numLines;
+                        output.scrollTop = 0;
+                }
 
 		function calculateCheckDigit(containerNumber) {
 			const letterValues = {
