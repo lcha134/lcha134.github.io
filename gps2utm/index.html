@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Lat/Lon ⇄ UTM (WGS84)</title>
+  <style>
+	:root {
+	  --primary: #2563eb;
+	  --primary-hover: #1d4ed8;
+	  --bg: #f3f4f6;
+	  --card-bg: #ffffff;
+	  --text-main: #1f2937;
+	  --text-muted: #6b7280;
+	  --border: #e5e7eb;
+	  --pre-bg: #1e293b;
+	  --pre-text: #f8fafc;
+	}
+
+	*, *::before, *::after { box-sizing: border-box; }
+
+	body { 
+	  font-family: 'Inter', system-ui, -apple-system, sans-serif; 
+	  background-color: var(--bg); 
+	  color: var(--text-main);
+	  margin: 0;
+	  padding: 40px 20px;
+	  display: flex;
+	  flex-direction: column;
+	  align-items: center;
+	}
+
+	h1 { margin-top: 0; font-weight: 800; color: #111827; }
+
+	.grid { 
+	  display: grid; 
+	  grid-template-columns: 1fr 1fr; 
+	  gap: 24px; 
+	  max-width: 1100px; 
+	  width: 100%;
+	}
+
+	/* Responsive adjustment */
+	@media (max-width: 900px) { 
+	  .grid { grid-template-columns: 1fr; } 
+	}
+
+	.card { 
+	  background: var(--card-bg); 
+	  border: 1px solid var(--border); 
+	  border-radius: 16px; 
+	  padding: 24px; 
+	  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+	}
+
+	h2 { margin-top: 0; font-size: 1.25rem; border-bottom: 1px solid var(--border); padding-bottom: 12px; }
+
+	label { 
+	  display: block; 
+	  font-size: 0.875rem; 
+	  font-weight: 600; 
+	  margin: 16px 0 6px; 
+	  color: var(--text-main);
+	}
+
+	input, select, textarea { 
+	  width: 100%; 
+	  padding: 10px 12px; 
+	  font-size: 14px; 
+	  border: 1px solid var(--border);
+	  border-radius: 8px;
+	  background-color: #f9fafb;
+	  transition: border-color 0.2s, box-shadow 0.2s;
+	}
+
+	input:focus, textarea:focus {
+	  outline: none;
+	  border-color: var(--primary);
+	  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+	}
+
+	textarea { min-height: 120px; font-family: ui-monospace, monospace; }
+
+	.row { display: flex; gap: 8px; margin-top: 16px; flex-wrap: wrap; }
+
+	button { 
+	  cursor: pointer; 
+	  background: var(--primary); 
+	  color: white; 
+	  border: none; 
+	  padding: 10px 16px; 
+	  border-radius: 8px; 
+	  font-weight: 600; 
+	  font-size: 14px;
+	  transition: background 0.2s;
+	  flex: 1;
+	  min-width: fit-content;
+	}
+
+	button:hover { background: var(--primary-hover); }
+
+	/* Secondary buttons */
+	#btnSample, #btnCopyUtm, #btnCopyGeo {
+	  background: #f3f4f6;
+	  color: #374151;
+	  border: 1px solid var(--border);
+	}
+
+	#btnSample:hover, #btnCopyUtm:hover, #btnCopyGeo:hover {
+	  background: #e5e7eb;
+	}
+
+	pre { 
+	  background: var(--pre-bg); 
+	  color: var(--pre-text);
+	  padding: 16px; 
+	  border-radius: 12px; 
+	  overflow: auto; 
+	  white-space: pre-wrap; 
+	  margin-top: 20px;
+	  font-size: 13px;
+	  line-height: 1.6;
+	  border: 1px solid #334155;
+	}
+
+	.small { color: var(--text-muted); font-size: 13px; margin-top: 12px; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <h1>Lat/Lon ⇄ UTM (WGS84)</h1>
+  <p class="small">
+    GPS→UTM accepts one coord per line: <code>lat, lon</code> (or space-separated).
+    Example: <code>-28.231, -48.6552</code>. Outputs UTM zone as <code>22J</code> (latitude band) and hemisphere separately.
+  </p>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Lat/Lon → UTM (bulk)</h2>
+      <label>Coordinates (one per line)</label>
+      <textarea id="gpsLines" placeholder="-28.231, -48.6552&#10;37.5665, 126.9780"></textarea>
+
+      <div class="row">
+        <button id="btnToUtm">Convert</button>
+        <button id="btnSample" type="button">Load sample</button>
+        <button id="btnCopyUtm" type="button">Copy output</button>
+      </div>
+
+      <pre id="outUtm">—</pre>
+      <div class="small">
+        Notes: UTM standard coverage is lat -80..84. For polar regions, UTM isn’t used (UPS instead).
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>UTM → Lat/Lon</h2>
+      <label>Zone (1–60)</label>
+      <input id="zone" type="number" min="1" max="60" step="1" placeholder="e.g. 22" />
+      <label>Hemisphere</label>
+      <select id="hemi">
+        <option value="N">Northern (N)</option>
+        <option value="S">Southern (S)</option>
+      </select>
+      <label>Easting (m)</label>
+      <input id="easting" type="number" step="any" placeholder="e.g. 730088.88" />
+      <label>Northing (m)</label>
+      <input id="northing" type="number" step="any" placeholder="e.g. 6874980.27" />
+
+      <div class="row">
+        <button id="btnToGeo">Convert</button>
+        <button id="btnCopyGeo" type="button">Copy output</button>
+      </div>
+
+      <pre id="outGeo">—</pre>
+    </div>
+  </div>
+
+  <!-- Preferred: local copy (put file at vendor/proj4.min.js) -->
+  <script src="./vendor/proj4.min.js"></script>
+
+  <!-- Optional fallback CDN (uncomment if you want fallback)   -->
+  <script>
+    if (typeof proj4 === "undefined") {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/npm/proj4@2.11.0/dist/proj4.js";
+      document.head.appendChild(s);
+    }
+  </script>
+
+
+  <script>
+    const WGS84 = "EPSG:4326";
+
+    function utmZoneFromLon(lon) {
+      return Math.floor((lon + 180) / 6) + 1; // 1..60
+    }
+
+    // UTM latitude bands: C..X (skip I and O). 8° tall (X is 12°).
+    function utmLatBand(lat) {
+      if (lat < -80 || lat > 84) return null;
+      const bands = "CDEFGHJKLMNPQRSTUVWX";
+      const idx = Math.floor((lat + 80) / 8);
+      return bands[Math.min(idx, bands.length - 1)];
+    }
+
+    function utmProj(zone, hemi) {
+      const southFlag = (hemi === "S") ? " +south" : "";
+      return `+proj=utm +zone=${zone} +datum=WGS84 +units=m +no_defs${southFlag}`;
+    }
+
+    // Parse a line like "-28.231, -48.6552" or "-28.231 -48.6552"
+	function parseLatLonLine(line) {
+	  const trimmed = line.trim();
+	  if (!trimmed) return null;
+
+	  // Grab the first two numbers in the string (handles commas/spaces/tabs/labels)
+	  const nums = trimmed.match(/[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?/g);
+	  if (!nums || nums.length < 2) throw new Error("Need 'lat, lon' (two numbers)");
+
+	  const lat = Number(nums[0]);
+	  const lon = Number(nums[1]);
+
+	  if (!Number.isFinite(lat) || !Number.isFinite(lon)) throw new Error("Not a valid number");
+	  if (lat < -90 || lat > 90) throw new Error("Latitude out of range (-90..90)");
+	  if (lon < -180 || lon > 180) throw new Error("Longitude out of range (-180..180)");
+
+	  return { lat, lon };
+	}
+
+    function ensureProj4Loaded() {
+      if (typeof proj4 === "undefined") {
+        throw new Error("proj4 not loaded. Add vendor/proj4.min.js or enable the CDN fallback.");
+      }
+    }
+
+    document.getElementById("btnSample").addEventListener("click", () => {
+      document.getElementById("gpsLines").value =
+`-28.231, -48.6552
+37.5665, 126.9780
+-36.8485, 174.7633`;
+    });
+
+    document.getElementById("btnCopyUtm").addEventListener("click", async () => {
+      const txt = document.getElementById("outUtm").textContent;
+      await navigator.clipboard.writeText(txt);
+    });
+
+    document.getElementById("btnCopyGeo").addEventListener("click", async () => {
+      const txt = document.getElementById("outGeo").textContent;
+      await navigator.clipboard.writeText(txt);
+    });
+
+	document.getElementById("btnToUtm").addEventListener("click", () => {
+	  try {
+		ensureProj4Loaded();
+
+		const raw = document.getElementById("gpsLines").value || "";
+
+		// 1) Normalise newlines + whitespace
+		const normalised = raw
+		  .replace(/\r\n/g, "\n")
+		  .replace(/\t/g, " ")          // tabs -> spaces
+		  .replace(/[ ]+/g, " ");       // collapse runs of spaces
+
+		// 2) Split + clean + remove empty lines
+		const cleanedLines = normalised
+		  .split("\n")
+		  .map(s => s.trim())
+		  .filter(s => s.length > 0 && /[0-9]/.test(s)); // Only keep lines with at least one digit
+
+		const out = [];
+
+		for (let i = 0; i < cleanedLines.length; i++) {
+		  const displayNo = i + 1;
+		  const line = cleanedLines[i];
+
+		  try {
+			const parsed = parseLatLonLine(line); // already validates numbers/range
+			if (!parsed) continue;
+
+			const { lat, lon } = parsed;
+			const zone = utmZoneFromLon(lon);
+			const hemi = (lat >= 0) ? "N" : "S";
+			const band = utmLatBand(lat);
+
+			if (!band) {
+			  out.push(`${displayNo}: ERROR (UTM not valid for lat ${lat})`);
+			  continue;
+			}
+
+			const utm = utmProj(zone, hemi);
+			const [e, n] = proj4(WGS84, utm, [lon, lat]);
+
+			out.push(
+			  `${displayNo}: UTM Zone ${zone}${band}, UTM Easting ${e.toFixed(2)}, UTM Northing ${n.toFixed(2)}`
+			);
+		  } catch (err) {
+			out.push(`${displayNo}: ERROR (${err.message}) | Input: ${line}`);
+		  }
+		}
+
+		document.getElementById("outUtm").textContent = out.length ? out.join("\n") : "—";
+	  } catch (err) {
+		document.getElementById("outUtm").textContent = `ERROR: ${err.message}`;
+	  }
+	});
+	
+    document.getElementById("btnToGeo").addEventListener("click", () => {
+      try {
+        ensureProj4Loaded();
+
+        const zone = Number(document.getElementById("zone").value);
+        const hemi = document.getElementById("hemi").value;
+        const e = Number(document.getElementById("easting").value);
+        const n = Number(document.getElementById("northing").value);
+
+        if (!Number.isFinite(zone) || zone < 1 || zone > 60) {
+          document.getElementById("outGeo").textContent = "Zone must be a number from 1 to 60.";
+          return;
+        }
+        if (!Number.isFinite(e) || !Number.isFinite(n)) {
+          document.getElementById("outGeo").textContent = "Please enter valid easting and northing.";
+          return;
+        }
+
+        const utm = utmProj(zone, hemi);
+        const [lon, lat] = proj4(utm, WGS84, [e, n]);
+        const band = utmLatBand(lat);
+
+        document.getElementById("outGeo").textContent =
+          `Latitude: ${lat.toFixed(6)}°\nLongitude: ${lon.toFixed(6)}°\nDerived UTM band: ${band ?? "N/A"}\n(Zone entered: ${zone}, Hemisphere entered: ${hemi})`;
+      } catch (err) {
+        document.getElementById("outGeo").textContent = `ERROR: ${err.message}`;
+      }
+    });
+  </script>
+</body>
+</html>
